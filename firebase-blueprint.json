@@ -1,0 +1,49 @@
+{
+  "entities": {
+    "TrackedItem": {
+      "title": "Tracked Item",
+      "description": "A movie or TV show tracked by the user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "OMDB ID" },
+        "title": { "type": "string" },
+        "year": { "type": "string" },
+        "poster": { "type": "string" },
+        "type": { "type": "string", "enum": ["movie", "series", "episode"] },
+        "status": { "type": "string", "enum": ["planned", "watching", "completed", "overdue"] },
+        "progress": { "type": "number", "description": "Percentage for movies, or current ep count for series" },
+        "total": { "type": "number", "description": "Total duration or total episodes" },
+        "lastWatched": { "type": "string", "format": "date-time" },
+        "rating": { "type": "number" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "plannedDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "userId", "status"]
+    },
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User specific settings and statistics.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "totalWatchTime": { "type": "number" },
+        "preferences": { "type": "object" }
+      },
+      "required": ["uid"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile data."
+    },
+    "users/{userId}/trackedItems/{itemId}": {
+      "schema": "TrackedItem",
+      "description": "The user's list of tracked movies and shows."
+    }
+  }
+}
