@@ -6,7 +6,15 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
+const firebaseConfig = {
+  apiKey: "AIzaSyDd1x4xE71GkSQ-XfFEN2t1WO_ucF4aICU",
+  authDomain: "gen-lang-client-0236448552.firebaseapp.com",
+  projectId: "gen-lang-client-0236448552",
+  storageBucket: "gen-lang-client-0236448552.firebasestorage.app",
+  messagingSenderId: "961903509364",
+  appId: "1:961903509364:web:0f7121d33a4338307a3621",
+  firestoreDatabaseId: "ai-studio-1d7cbe1f-4d27-4ef7-a662-6786367eaf69"
+};
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
