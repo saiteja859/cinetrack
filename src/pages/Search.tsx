@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Search as SearchIcon, Loader2, Plus, Bookmark, Check, Play, Calendar as CalendarIcon, Info, Star, ChevronRight, ChevronLeft, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { searchMovies, getMovieDetails } from '../services/movieService';
@@ -454,13 +454,52 @@ export default function Search() {
 const MovieCard: React.FC<{ 
   movie: Movie, isSelected: boolean, isTracked: boolean, onSelect: () => void, onInfo: () => void | Promise<void>, onPlan: () => void, onStart: () => void | Promise<void>, onDone: () => void | Promise<void> 
 }> = ({ movie, isSelected, isTracked, onSelect, onInfo, onPlan, onStart, onDone }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside, { passive: true });
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const isButtonClick = target.closest('button') || target.closest('a');
+    if (isButtonClick) {
+      setIsOpen(false);
+      return;
+    }
+    const isTouch = window.matchMedia('(pointer: coarse)').matches;
+    if (isTouch) {
+      e.stopPropagation();
+      setIsOpen(prev => !prev);
+    }
+  };
+
   return (
-    <div className={cn("group relative flex flex-col space-y-4", isTracked && "opacity-60")}>
-      <div className={cn(
-        "aspect-[2/3] w-full rounded-2xl overflow-hidden bg-[#141416] border transition-all duration-300 relative cursor-pointer",
-        isSelected ? "border-blue-500 ring-4 ring-blue-500/20" : isTracked ? "border-blue-500/30" : "border-[#232326]"
-      )}>
-        <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover transition-all duration-500 group-hover:scale-110" />
+    <div ref={cardRef} className={cn("group relative flex flex-col space-y-4", isTracked && "opacity-60", isOpen && "is-open")}>
+      <div 
+        onClick={handleCardClick}
+        className={cn(
+          "aspect-[2/3] w-full rounded-2xl overflow-hidden bg-[#141416] border transition-all duration-300 relative cursor-pointer",
+          isSelected ? "border-blue-500 ring-4 ring-blue-500/20" : isTracked ? "border-blue-500/30" : "border-[#232326]"
+        )}
+      >
+        <img 
+          src={movie.poster} 
+          alt={movie.title} 
+          className="w-full h-full object-cover transition-all duration-500 group-hover:scale-110 group-[.is-open]:scale-110" 
+        />
         
         {/* Tracked Indicator */}
         {isTracked && (
@@ -474,14 +513,14 @@ const MovieCard: React.FC<{
           onClick={(e) => { e.stopPropagation(); onSelect(); }}
           className={cn(
             "absolute top-4 left-4 z-20 w-8 h-8 rounded-full border flex items-center justify-center transition-all",
-            isSelected ? "bg-white border-white shadow-xl" : "bg-black/40 border-neutral-700/50 backdrop-blur-md opacity-0 group-hover:opacity-100"
+            isSelected ? "bg-white border-white shadow-xl" : "bg-black/40 border-neutral-700/50 backdrop-blur-md opacity-0 group-hover:opacity-100 group-[.is-open]:opacity-100"
           )}
         >
           {isSelected ? <Check className="w-4 h-4 text-blue-600 font-bold" /> : <div className="w-2 h-2 rounded-full border border-white/40" />}
         </button>
 
         {/* Action Overlay */}
-        <div className="opacity-0 group-hover:opacity-100 absolute inset-0 bg-black/80 backdrop-blur-[2px] transition-opacity duration-300 flex flex-col items-center justify-center p-6 gap-6">
+        <div className="opacity-0 group-hover:opacity-100 group-[.is-open]:opacity-100 absolute inset-0 bg-black/80 backdrop-blur-[2px] transition-opacity duration-300 flex flex-col items-center justify-center p-6 gap-6">
           <div className="grid grid-cols-3 gap-4 w-full">
             <IconButton icon={CalendarIcon} tooltip="Plan" color="hover:text-blue-500" onClick={(e) => { e.stopPropagation(); onPlan(); }} />
             <IconButton icon={Play} tooltip="Start" color="hover:text-amber-500" fill onClick={(e) => { e.stopPropagation(); onStart(); }} />

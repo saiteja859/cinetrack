@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../AuthContext';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, query as firebaseQuery, onSnapshot, orderBy, doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -333,11 +333,49 @@ export default function Library() {
 const LibraryPoster: React.FC<{ item: TrackedItem, onEdit: () => void, onRemove: () => void | Promise<void>, onReschedule: () => void }> = ({ item, onEdit, onRemove, onReschedule }) => {
   const isWatching = item.status === ItemStatus.WATCHING;
   const isCompleted = item.status === ItemStatus.COMPLETED;
+  const [isOpen, setIsOpen] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside, { passive: true });
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const isButtonClick = target.closest('button') || target.closest('a');
+    if (isButtonClick) {
+      setIsOpen(false);
+      return;
+    }
+    const isTouch = window.matchMedia('(pointer: coarse)').matches;
+    if (isTouch) {
+      e.stopPropagation();
+      setIsOpen(prev => !prev);
+    }
+  };
 
   return (
-    <div className="group flex flex-col gap-5">
-      <div className="relative aspect-[2/3] rounded-2xl overflow-hidden border border-[#232326] transition-all duration-500 group-hover:shadow-[0_20px_40px_rgba(0,0,0,0.6)] group-hover:-translate-y-2 cursor-pointer bg-neutral-900">
-        <img src={item.poster} alt={item.title} className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-500" />
+    <div ref={cardRef} className={cn("group flex flex-col gap-5", isOpen && "is-open")}>
+      <div 
+        onClick={handleCardClick}
+        className="relative aspect-[2/3] rounded-2xl overflow-hidden border border-[#232326] transition-all duration-500 group-hover:shadow-[0_20px_40px_rgba(0,0,0,0.6)] group-[.is-open]:shadow-[0_20px_40px_rgba(0,0,0,0.6)] group-hover:-translate-y-2 group-[.is-open]:-translate-y-2 cursor-pointer bg-neutral-900"
+      >
+        <img 
+          src={item.poster} 
+          alt={item.title} 
+          className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 group-[.is-open]:grayscale-0 transition-all duration-500" 
+        />
         
         <div className="absolute top-4 left-4 z-10 bg-black/60 backdrop-blur-xl px-3 py-1.5 rounded-lg border border-neutral-800 flex items-center gap-2">
           <div className={cn(
@@ -350,10 +388,10 @@ const LibraryPoster: React.FC<{ item: TrackedItem, onEdit: () => void, onRemove:
           </span>
         </div>
 
-        <div className="opacity-0 group-hover:opacity-100 absolute inset-0 bg-black/60 backdrop-blur-sm transition-all duration-300 flex items-center justify-center gap-4">
-           <button onClick={onEdit} className="p-3 bg-white text-black rounded-full hover:bg-blue-600 hover:text-white transition-all scale-90 group-hover:scale-100"><Edit3 className="w-5 h-5" /></button>
-           <button onClick={onReschedule} className="p-3 bg-white text-black rounded-full hover:bg-amber-500 hover:text-white transition-all scale-90 group-hover:scale-100"><CalendarIcon className="w-5 h-5" /></button>
-           <button onClick={onRemove} className="p-3 bg-red-600 text-white rounded-full hover:bg-red-500 transition-all scale-90 group-hover:scale-100"><Trash2 className="w-5 h-5" /></button>
+        <div className="opacity-0 group-hover:opacity-100 group-[.is-open]:opacity-100 absolute inset-0 bg-black/60 backdrop-blur-sm transition-all duration-300 flex items-center justify-center gap-4">
+           <button onClick={onEdit} className="p-3 bg-white text-black rounded-full hover:bg-blue-600 hover:text-white transition-all scale-90 group-hover:scale-100 group-[.is-open]:scale-100"><Edit3 className="w-5 h-5" /></button>
+           <button onClick={onReschedule} className="p-3 bg-white text-black rounded-full hover:bg-amber-500 hover:text-white transition-all scale-90 group-hover:scale-100 group-[.is-open]:scale-100"><CalendarIcon className="w-5 h-5" /></button>
+           <button onClick={onRemove} className="p-3 bg-red-600 text-white rounded-full hover:bg-red-500 transition-all scale-90 group-hover:scale-100 group-[.is-open]:scale-100"><Trash2 className="w-5 h-5" /></button>
         </div>
 
         {isWatching && (
@@ -363,7 +401,7 @@ const LibraryPoster: React.FC<{ item: TrackedItem, onEdit: () => void, onRemove:
         )}
       </div>
       <div className="flex flex-col gap-1 px-1">
-        <span className="font-black text-white truncate group-hover:text-blue-500 transition-colors uppercase tracking-tight text-sm">{item.title}</span>
+        <span className="font-black text-white truncate group-hover:text-blue-500 group-[.is-open]:text-blue-500 transition-colors uppercase tracking-tight text-sm">{item.title}</span>
         <div className="flex justify-between items-center">
           <span className="text-neutral-600 text-[10px] font-bold uppercase tracking-widest">{item.year} • {item.type}</span>
           {isCompleted && (

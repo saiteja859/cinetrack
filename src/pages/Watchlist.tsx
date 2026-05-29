@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../AuthContext';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, query as firebaseQuery, onSnapshot, orderBy, doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -280,27 +280,69 @@ export default function Watchlist() {
 
 const PlannerCard: React.FC<{ item: TrackedItem, onEdit: () => void, onReschedule: () => void, onStart: () => void | Promise<void>, onDone: () => void | Promise<void> }> = ({ item, onEdit, onReschedule, onStart, onDone }) => {
   const isOverdue = item.plannedDate && isPast(parseISO(item.plannedDate)) && !isToday(parseISO(item.plannedDate));
+  const [isOpen, setIsOpen] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside, { passive: true });
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const isButtonClick = target.closest('button') || target.closest('a');
+    if (isButtonClick) {
+      setIsOpen(false);
+      return;
+    }
+    const isTouch = window.matchMedia('(pointer: coarse)').matches;
+    if (isTouch) {
+      e.stopPropagation();
+      setIsOpen(prev => !prev);
+    }
+  };
   
   return (
-    <div className={cn(
-      "group relative bg-[#141416] rounded-2xl overflow-hidden border transition-all hover:scale-[1.02] shadow-2xl",
-      isOverdue ? "border-red-600/30" : "border-neutral-800/50 hover:border-blue-500/30"
-    )}>
+    <div 
+      ref={cardRef}
+      className={cn(
+        "group relative bg-[#141416] rounded-2xl overflow-hidden border transition-all hover:scale-[1.02] group-[.is-open]:scale-[1.02] shadow-2xl",
+        isOverdue ? "border-red-600/30" : "border-neutral-800/50 hover:border-blue-500/30 group-[.is-open]:border-blue-500/30",
+        isOpen && "is-open"
+      )}
+    >
       {isOverdue && (
         <div className="absolute top-3 left-3 z-10 bg-red-600 text-white flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest shadow-lg">
           <AlertCircle className="w-3 h-3 fill-current" />
           Overdue
         </div>
       )}
-      <div className="aspect-[2/3] overflow-hidden relative">
-        <img src={item.poster} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={item.title} />
+      <div 
+        onClick={handleCardClick}
+        className="aspect-[2/3] overflow-hidden relative cursor-pointer"
+      >
+        <img 
+          src={item.poster} 
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 group-[.is-open]:scale-110" 
+          alt={item.title} 
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
         
         {/* Actions */}
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-black/40 backdrop-blur-[2px] transition-all duration-300 flex items-center justify-center gap-4">
-           <button onClick={onStart} className="p-3 bg-white text-black rounded-full hover:bg-blue-600 hover:text-white transition-all scale-90 group-hover:scale-100"><Play className="w-5 h-5 fill-current" /></button>
-           <button onClick={onReschedule} className="p-3 bg-white text-black rounded-full hover:bg-amber-500 hover:text-white transition-all scale-90 group-hover:scale-100"><CalendarIcon className="w-5 h-5" /></button>
-           <button onClick={onEdit} className="p-3 bg-white text-black rounded-full hover:bg-emerald-500 hover:text-white transition-all scale-90 group-hover:scale-100"><MoreVertical className="w-5 h-5" /></button>
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 group-[.is-open]:opacity-100 bg-black/40 backdrop-blur-[2px] transition-all duration-300 flex items-center justify-center gap-4">
+           <button onClick={onStart} className="p-3 bg-white text-black rounded-full hover:bg-blue-600 hover:text-white transition-all scale-90 group-hover:scale-100 group-[.is-open]:scale-100"><Play className="w-5 h-5 fill-current" /></button>
+           <button onClick={onReschedule} className="p-3 bg-white text-black rounded-full hover:bg-amber-500 hover:text-white transition-all scale-90 group-hover:scale-100 group-[.is-open]:scale-100"><CalendarIcon className="w-5 h-5" /></button>
+           <button onClick={onEdit} className="p-3 bg-white text-black rounded-full hover:bg-emerald-500 hover:text-white transition-all scale-90 group-hover:scale-100 group-[.is-open]:scale-100"><MoreVertical className="w-5 h-5" /></button>
         </div>
       </div>
       <div className="p-5 space-y-4">
